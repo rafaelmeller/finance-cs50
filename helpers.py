@@ -66,6 +66,9 @@ def lookup(symbol):
         f"&interval=1d&events=history&includeAdjustedClose=true"
     )
 
+    # DEBUG: Print the URL
+    print(f"Request URL: {url}")
+
     # Query API
     try:
         response = requests.get(
@@ -75,11 +78,17 @@ def lookup(symbol):
         )
         response.raise_for_status()
 
+        # DEBUG: Print the response status code and content
+        print(f"Response Status Code: {response.status_code}")
+        print(f"Response Content: {response.content}")
+
         # CSV header: Date,Open,High,Low,Close,Adj Close,Volume
         quotes = list(csv.DictReader(response.content.decode("utf-8").splitlines()))
         price = round(float(quotes[-1]["Adj Close"]), 2)
         return {"price": price, "symbol": symbol}
-    except (KeyError, IndexError, requests.RequestException, ValueError):
+    except (KeyError, IndexError, requests.RequestException, ValueError) as e:
+        # Debug: Print the exception
+        print(f"Exception: {e}")
         return None
 
 
