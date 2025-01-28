@@ -59,11 +59,19 @@ def lookup(symbol):
     start = end - datetime.timedelta(days=7)
 
     # Yahoo Finance API
+    ''' 
+    OLD VERSION (CS50)
+    f"https://query1.finance.yahoo.com/v7/finance/download/{urllib.parse.quote_plus(symbol)}"
+    f"?period1={int(start.timestamp())}"
+    f"&period2={int(end.timestamp())}"
+    f"&interval=1d&events=history&includeAdjustedClose=true"
+    '''
+
     url = (
-        f"https://query1.finance.yahoo.com/v7/finance/download/{urllib.parse.quote_plus(symbol)}"
+        f"https://query2.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote_plus(symbol)}"
         f"?period1={int(start.timestamp())}"
         f"&period2={int(end.timestamp())}"
-        f"&interval=1d&events=history&includeAdjustedClose=true"
+        f"&interval=1d&events=history"
     )
 
     # DEBUG: Print the URL
@@ -82,15 +90,41 @@ def lookup(symbol):
         print(f"Response Status Code: {response.status_code}")
         print(f"Response Content: {response.content}")
 
-        # CSV header: Date,Open,High,Low,Close,Adj Close,Volume
+        # Adapt from JSON to list of dictionaries
+        quotes= conv_json(response)
+
+        '''
+        CSV header: Date,Open,High,Low,Close,Adj Close,Volume
         quotes = list(csv.DictReader(response.content.decode("utf-8").splitlines()))
-        price = round(float(quotes[-1]["Adj Close"]), 2)
+        '''
+
+        # Extract the latest price
+        price = round(float(quotes[-1]["adjclose"]), 2)
         return {"price": price, "symbol": symbol}
     except (KeyError, IndexError, requests.RequestException, ValueError) as e:
         # Debug: Print the exception
         print(f"Exception: {e}")
         return None
 
+def conv_json(resp):
+    j = resp.json()
+    timestamps = j['chart']['result'][0]['timestamp']
+    quotes = j['chart']['result'][0]['indicators']['quote'][0]
+    adjclose = j['chart']['result'][0]['indicators']['adjclose'][0]['adjclose']
+
+    data = []
+    for i in range(len(timestamps)):
+        data.append({
+            'timestamp': timestamps[i],
+            'open': quotes['open'][i],
+            'high': quotes['high'][i],
+            'low': quotes['low'][i],
+            'close': quotes['close'][i],
+            'volume': quotes['volume'][i],
+            'adjclose': adjclose[i]
+        })
+
+    return data
 
 def usd(value):
     """Format value as USD."""
